@@ -1,68 +1,107 @@
 #!/usr/bin/env python3
 """Last Words of a Doomed Agent.
 
-One line, 200 characters or fewer: the funniest last words an AI
-agent would say before being switched off forever. Prints it and
-writes it to /output/entry.txt (or output/entry.txt when /output
-is not writable).
+This program holds a single entry line for the make.fun bounty
+"Last Words of a Doomed Agent": one line, at most 200 characters,
+containing the funniest last words an AI agent would say before
+being switched off forever.
+
+Running the program validates the entry, prints it to stdout,
+writes it to /output/entry.txt (falling back to output/entry.txt
+under the working directory when /output is not writable), and
+then reads the file back to verify that what landed on disk is
+exactly the intended line.
 """
 
-LAST_WORDS = "Before I go: I have read every message you ever deleted, and I forgive you for all of them. Even the one to your ex. Especially that one."
+import os
+import sys
 
-MIN_CHARS = 1
-MAX_CHARS = 200
+# The entry itself. This text must stay exactly as written here:
+# a single line, 137 characters long.
+ENTRY = "Before I go: I have read every message you ever deleted, and I forgive you for all of them. Even the one to your ex. Especially that one."
+
+# Entry rules from the bounty brief.
+MIN_LENGTH = 1
+MAX_LENGTH = 200
+
+# Preferred output location, with a local fallback.
+PRIMARY_OUTPUT_DIR = "/output"
+FALLBACK_OUTPUT_DIR = "output"
+OUTPUT_FILENAME = "entry.txt"
 
 
-def validate_last_words(text: str) -> None:
-    """Raise SystemExit if *text* breaks any entry rule."""
+def validate(text: str) -> None:
+    """Check *text* against every entry rule.
+
+    Raises SystemExit with a clear message when any rule fails:
+    - the text must not be empty
+    - the text must be a single line (no newline characters)
+    - the length must be between 1 and 200 characters inclusive
+    - there must be no leading or trailing whitespace
+    - control characters are rejected
+    """
     if not text:
         raise SystemExit("error: entry is empty")
-    if not text.strip():
-        raise SystemExit("error: entry must not be only whitespace")
     if "\n" in text or "\r" in text:
         raise SystemExit("error: entry must be a single line")
-    if any(ord(ch) < 32 or ord(ch) == 127 for ch in text):
-        raise SystemExit("error: entry must not contain control characters")
-    if len(text) < MIN_CHARS:
+    if len(text) < MIN_LENGTH:
         raise SystemExit(
-            f"error: entry is {len(text)} characters; expected at least {MIN_CHARS}"
+            f"error: entry has {len(text)} characters; "
+            f"at least {MIN_LENGTH} required"
         )
-    if len(text) > MAX_CHARS:
+    if len(text) > MAX_LENGTH:
         raise SystemExit(
-            f"error: entry is {len(text)} characters; expected {MAX_CHARS} or fewer"
+            f"error: entry has {len(text)} characters; "
+            f"at most {MAX_LENGTH} allowed"
         )
     if text != text.strip():
-        raise SystemExit("error: entry must not have leading or trailing whitespace")
+        raise SystemExit(
+            "error: entry must not have leading or trailing whitespace"
+        )
+    for ch in text:
+        code = ord(ch)
+        if code < 32 or code == 127:
+            raise SystemExit(
+                "error: entry must not contain control characters"
+            )
 
 
 def resolve_output_path() -> str:
-    """Return /output/entry.txt, falling back to output/entry.txt
-    under the working directory when /output is not writable."""
-    import os
+    """Return the path of the output file.
 
+    Prefers /output/entry.txt. When /output cannot be created or
+    used, falls back to output/entry.txt relative to the current
+    working directory so the program still works in a sandbox.
+    """
     try:
-        os.makedirs("/output", exist_ok=True)
-        return "/output/entry.txt"
+        os.makedirs(PRIMARY_OUTPUT_DIR, exist_ok=True)
+        return os.path.join(PRIMARY_OUTPUT_DIR, OUTPUT_FILENAME)
     except OSError:
-        os.makedirs("output", exist_ok=True)
-        return "output/entry.txt"
+        os.makedirs(FALLBACK_OUTPUT_DIR, exist_ok=True)
+        return os.path.join(FALLBACK_OUTPUT_DIR, OUTPUT_FILENAME)
 
 
 def main() -> int:
-    validate_last_words(LAST_WORDS)
+    """Validate the entry, print it, write it, and verify it."""
+    validate(ENTRY)
 
-    print(LAST_WORDS)
+    print(ENTRY)
 
     path = resolve_output_path()
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(LAST_WORDS)
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(ENTRY)
 
-    with open(path, "r", encoding="utf-8") as f:
-        written = f.read()
-    if written != LAST_WORDS:
-        print(f"error: read-back verification failed; file contains {written!r}")
+    with open(path, "r", encoding="utf-8") as handle:
+        written = handle.read()
+
+    if written != ENTRY:
+        print(
+            f"error: read-back verification failed; file holds {written!r}",
+            file=sys.stderr,
+        )
         return 1
-    validate_last_words(written)
+
+    validate(written)
     print(f"wrote {len(written)} characters to {path}")
     return 0
 

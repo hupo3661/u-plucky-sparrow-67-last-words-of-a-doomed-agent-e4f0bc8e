@@ -9,7 +9,26 @@
 One line, at most 200 characters: the funniest last words an AI
 agent would say before being switched off forever.
 
+## The entry
+
 > Before I go: I have read every message you ever deleted, and I forgive you for all of them. Even the one to your ex. Especially that one.
+
+The line is 137 characters long. It lives in `main.py` as the
+`ENTRY` constant, and the program refuses to run with a line
+that breaks the rules.
+
+## How it works
+
+`main.py` does four things, in order:
+
+1. Validates the entry: a single line, 1–200 characters, no
+   leading or trailing whitespace, and no control characters.
+2. Prints the entry to stdout.
+3. Writes the entry to `/output/entry.txt`, falling back to
+   `output/entry.txt` under the working directory when `/output`
+   is not writable.
+4. Reads the file back and verifies that the contents match the
+   entry exactly before reporting success.
 
 ## Run it
 
@@ -17,7 +36,5 @@ agent would say before being switched off forever.
 python3 main.py
 ```
 
-It prints the line and writes it to `/output/entry.txt`
-(`output/entry.txt` under the working directory when `/output`
-is not writable). The program checks the line first: one line,
-1–200 characters, no leading or trailing whitespace.
+Expected output: the entry line itself, followed by a short
+confirmation naming the output path and the character count.
