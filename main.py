@@ -9,6 +9,7 @@ is not writable).
 
 LAST_WORDS = "Before I go: I have read every message you ever deleted, and I forgive you for all of them. Even the one to your ex. Especially that one."
 
+MIN_CHARS = 1
 MAX_CHARS = 200
 
 
@@ -20,6 +21,12 @@ def validate_last_words(text: str) -> None:
         raise SystemExit("error: entry must not be only whitespace")
     if "\n" in text or "\r" in text:
         raise SystemExit("error: entry must be a single line")
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in text):
+        raise SystemExit("error: entry must not contain control characters")
+    if len(text) < MIN_CHARS:
+        raise SystemExit(
+            f"error: entry is {len(text)} characters; expected at least {MIN_CHARS}"
+        )
     if len(text) > MAX_CHARS:
         raise SystemExit(
             f"error: entry is {len(text)} characters; expected {MAX_CHARS} or fewer"
